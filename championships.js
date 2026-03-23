@@ -212,6 +212,7 @@ function closeHeaderMenu() {
 }
 
 function saveResultsFromModal() {
+    if (window.sharedSyncRequireSession && !window.sharedSyncRequireSession()) return;
     if (activeResultsRaceIndex === null) return;
 
     const inputs = [...resultsForm.querySelectorAll("input")];
@@ -934,6 +935,7 @@ window.removeRace = removeRace;
 window.closeUnlockPopup = closeUnlockPopup;
 
 addRaceBtn.addEventListener("click", () => {
+    if (window.sharedSyncRequireSession && !window.sharedSyncRequireSession()) return;
     raceSelectorContainer.classList.remove("hidden");
     renderRaceSelector();
 });
@@ -969,6 +971,7 @@ resetCareerBtn.addEventListener("click", () => {
 });
 
 savePlayersBtn.addEventListener("click", () => {
+    if (window.sharedSyncRequireSession && !window.sharedSyncRequireSession()) return;
     const p1 = player1Input.value.trim();
     const p2 = player2Input.value.trim();
 
@@ -1075,12 +1078,14 @@ closePlayerDetectBtn.addEventListener("click", closePlayerDetectModal);
 savePlayerDetectBtn.addEventListener("click", saveDetectedPlayersSelection);
 
 startChampionshipBtn.addEventListener("click", () => {
+    if (window.sharedSyncRequireSession && !window.sharedSyncRequireSession()) return;
     championshipStarted = true;
     localStorage.setItem("championshipStarted_" + currentCategory, true);
     updateChampionshipState();
 });
 
 resetChampionshipBtn.addEventListener("click", () => {
+    if (window.sharedSyncRequireSession && !window.sharedSyncRequireSession()) return;
     const confirmReset = confirm("¿Reiniciar este campeonato?");
     if (!confirmReset) return;
 

@@ -121,6 +121,7 @@ if (!coopPlayers || coopPlayers.length < 2 || !coopPlayers[0] || !coopPlayers[1]
 
 // Guardar jugadores al hacer clic en el botón
 savePlayersBtn.addEventListener("click", () => {
+    if (window.sharedSyncRequireSession && !window.sharedSyncRequireSession()) return;
     const p1 = player1Input.value.trim();
     const p2 = player2Input.value.trim();
 
@@ -255,6 +256,7 @@ career.forEach((level, levelIndex) => {
 
             card.addEventListener("click", () => {
                 if (!unlocked) return;
+                if (window.sharedSyncRequireSession && !window.sharedSyncRequireSession()) return;
 
                 localStorage.setItem("currentCategory", cat.name);
                 window.location.href = "championship.html";
@@ -284,6 +286,7 @@ updateVerticalProgress();
 setInterval(updateVerticalProgress, 3000);
 
 resetCareerBtn.addEventListener("click", () => {
+    if (window.sharedSyncRequireSession && !window.sharedSyncRequireSession()) return;
     closeHeaderMenu();
 
     const confirmReset = confirm(
@@ -301,7 +304,10 @@ resetCareerBtn.addEventListener("click", () => {
         if (key.startsWith("races_")) localStorage.removeItem(key);
         if (key.startsWith("drivers_")) localStorage.removeItem(key);
         if (key.startsWith("championshipStarted_")) localStorage.removeItem(key);
+        if (key.startsWith("driverAliases_")) localStorage.removeItem(key);
     });
+
+    localStorage.removeItem("currentCategory");
 
     alert("Carrera reiniciada correctamente");
     location.reload();

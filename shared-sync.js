@@ -11,10 +11,15 @@
         "championshipStarted_",
         "driverAliases_"
     ];
+    const POLL_INTERVAL_MS = 8000;
 
     let client = null;
     let applyingRemoteState = false;
+    let pendingLocalChanges = false;
     let saveTimer = null;
+    let pollTimer = null;
+    let lastKnownRemoteUpdatedAt = null;
+    let ui = null;
 
     function isConfigured() {
         return Boolean(
@@ -26,6 +31,10 @@
 
     function getSessionCode() {
         return localStorage.getItem(SESSION_KEY) || "";
+    }
+
+    function hasSession() {
+        return Boolean(getSessionCode());
     }
 
     function isShareableKey(key) {
@@ -71,12 +80,14 @@
 
     function ensureClient() {
         if (!isConfigured()) return null;
+
         if (!client) {
             client = window.supabase.createClient(
                 window.SUPABASE_CONFIG.url,
                 window.SUPABASE_CONFIG.anonKey
             );
         }
+
         return client;
     }
 
@@ -94,10 +105,12 @@
         return data;
     }
 
-    async function saveRemoteState() {
+    async function saveRemoteState(force = false) {
         const supabase = ensureClient();
         const sessionCode = getSessionCode();
+
         if (!supabase || !sessionCode || applyingRemoteState) return;
+        if (!force && !pendingLocalChanges) return;
 
         const payload = {
             session_code: sessionCode,
@@ -110,17 +123,42 @@
             .upsert(payload, { onConflict: "session_code" });
 
         if (error) throw error;
+
+        pendingLocalChanges = false;
+        lastKnownRemoteUpdatedAt = payload.updated_at;
     }
 
     function scheduleSave() {
-        if (!getSessionCode() || applyingRemoteState || !isConfigured()) return;
+        if (!hasSession() || applyingRemoteState || !isConfigured()) return;
 
+        pendingLocalChanges = true;
         clearTimeout(saveTimer);
         saveTimer = setTimeout(() => {
             saveRemoteState().catch((error) => {
                 console.error("Shared sync save failed:", error);
+                if (ui) {
+                    ui.setStatus("No se pudo guardar en Supabase. Revisa conexión o permisos.");
+                }
             });
-        }, 500);
+        }, 600);
+    }
+
+    async function pollRemoteState() {
+        const sessionCode = getSessionCode();
+        if (!sessionCode || !isConfigured() || applyingRemoteState || pendingLocalChanges) return;
+
+        try {
+            const remote = await fetchRemoteState(sessionCode);
+            if (!remote?.state?.data) return;
+
+            if (remote.updated_at && remote.updated_at !== lastKnownRemoteUpdatedAt) {
+                applyShareableState(remote.state);
+                lastKnownRemoteUpdatedAt = remote.updated_at;
+                window.location.reload();
+            }
+        } catch (error) {
+            console.error("Shared sync poll failed:", error);
+        }
     }
 
     function patchLocalStorage() {
@@ -187,39 +225,30 @@
             statusElement.classList.toggle("hidden", !visible);
         }
 
-        function openModal() {
+        function openModal(required = false) {
             inputElement.value = getSessionCode();
-            setStatus("", false);
+            modalElement.dataset.required = required ? "true" : "false";
+            setStatus(required ? "Ingresá primero un código de sesión para trabajar con datos compartidos." : "", required);
             modalElement.classList.remove("hidden");
             requestAnimationFrame(() => inputElement.focus());
         }
 
         function closeModal() {
+            if (modalElement.dataset.required === "true" && !hasSession()) return;
             modalElement.classList.add("hidden");
         }
 
-        syncButton.addEventListener("click", () => {
-            openModal();
-        });
-
-        closeButton.addEventListener("click", closeModal);
-
-        disconnectButton.addEventListener("click", () => {
-            localStorage.removeItem(SESSION_KEY);
-            setStatus("Sesión compartida desconectada.");
-        });
-
-        saveButton.addEventListener("click", async () => {
+        async function connectSessionCode() {
             const sessionCode = inputElement.value.trim();
 
             if (!sessionCode) {
                 setStatus("Ingresa un código de sesión.");
-                return;
+                return false;
             }
 
             if (!isConfigured()) {
-                setStatus("Completa supabase-config.js con tu URL y anon key antes de conectar.");
-                return;
+                setStatus("Completa supabase-config.js con tu URL y publishable key antes de conectar.");
+                return false;
             }
 
             localStorage.setItem(SESSION_KEY, sessionCode);
@@ -230,22 +259,51 @@
 
                 if (remote?.state?.data && Object.keys(remote.state.data).length > 0) {
                     applyShareableState(remote.state);
+                    lastKnownRemoteUpdatedAt = remote.updated_at || null;
                     setStatus("Se cargó el progreso compartido. La página se va a recargar.");
                     setTimeout(() => window.location.reload(), 700);
-                    return;
+                    return true;
                 }
 
-                await saveRemoteState();
+                pendingLocalChanges = true;
+                await saveRemoteState(true);
                 setStatus("Sesión compartida conectada correctamente.");
+                modalElement.classList.add("hidden");
+                return true;
             } catch (error) {
                 console.error("Shared sync connect failed:", error);
-                setStatus("No se pudo conectar con Supabase. Revisa la tabla, la URL, la anon key y las políticas.");
+                setStatus("No se pudo conectar con Supabase. Revisa la tabla, la URL, la key y las políticas.");
+                return false;
             }
+        }
+
+        syncButton.addEventListener("click", () => {
+            openModal(false);
         });
+
+        closeButton.addEventListener("click", closeModal);
+
+        disconnectButton.addEventListener("click", () => {
+            localStorage.removeItem(SESSION_KEY);
+            setStatus("Sesión compartida desconectada.");
+            openModal(true);
+        });
+
+        saveButton.addEventListener("click", connectSessionCode);
 
         modalElement.addEventListener("click", (event) => {
             if (event.target === modalElement) closeModal();
         });
+
+        ui = {
+            openModal,
+            closeModal,
+            setStatus
+        };
+
+        if (!hasSession() && isConfigured()) {
+            openModal(true);
+        }
     }
 
     async function initializeRemoteState() {
@@ -255,10 +313,41 @@
         const remote = await fetchRemoteState(sessionCode);
         if (remote?.state?.data && Object.keys(remote.state.data).length > 0) {
             applyShareableState(remote.state);
+            lastKnownRemoteUpdatedAt = remote.updated_at || null;
         }
     }
 
+    function startPolling() {
+        clearInterval(pollTimer);
+        pollTimer = setInterval(pollRemoteState, POLL_INTERVAL_MS);
+    }
+
+    function setupLifecycleSync() {
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "hidden") {
+                saveRemoteState(true).catch((error) => {
+                    console.error("Shared sync flush failed:", error);
+                });
+            }
+        });
+
+        window.addEventListener("beforeunload", () => {
+            saveRemoteState(true).catch(() => {});
+        });
+    }
+
     patchLocalStorage();
+
+    window.sharedSyncHasSession = hasSession;
+    window.sharedSyncRequireSession = function () {
+        if (!isConfigured()) return true;
+        if (hasSession()) return true;
+        if (ui) ui.openModal(true);
+        return false;
+    };
+    window.sharedSyncForceSave = function () {
+        return saveRemoteState(true);
+    };
 
     window.sharedSyncReady = (async () => {
         try {
@@ -268,7 +357,12 @@
         }
     })();
 
-    document.addEventListener("DOMContentLoaded", () => {
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", injectSyncUi);
+    } else {
         injectSyncUi();
-    });
+    }
+
+    startPolling();
+    setupLifecycleSync();
 })();
