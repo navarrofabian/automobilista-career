@@ -1,3 +1,6 @@
+(async function () {
+await (window.sharedSyncReady || Promise.resolve());
+
 const currentCategory = localStorage.getItem("currentCategory");
 const pointsSystem = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1];
 
@@ -788,6 +791,10 @@ function closeUnlockPopup() {
     window.location.href = "index.html";
 }
 
+window.addResult = addResult;
+window.removeRace = removeRace;
+window.closeUnlockPopup = closeUnlockPopup;
+
 addRaceBtn.addEventListener("click", () => {
     raceSelectorContainer.classList.remove("hidden");
     renderRaceSelector();
@@ -952,3 +959,4 @@ rebuildStandings();
 renderRaceList();
 updateChampionshipState();
 updateTeamPanel();
+})();

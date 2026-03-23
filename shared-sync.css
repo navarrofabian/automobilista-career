@@ -1,0 +1,41 @@
+.syncStatus{
+    margin:0 0 8px;
+    padding:10px 12px;
+    border-radius:10px;
+    background:#151f28;
+    color:#c9e5ff;
+    font-size:13px;
+}
+
+.syncHint{
+    margin:0;
+    color:#bdbdbd;
+    font-size:13px;
+    line-height:1.5;
+}
+
+.syncField{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+
+.syncField label{
+    font-size:13px;
+    color:#d0d0d0;
+}
+
+.syncActions{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+}
+
+.syncSecondaryBtn{
+    background:#292929 !important;
+}
+
+.syncSecondaryBtn:hover{
+    background:#373737 !important;
+}

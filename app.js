@@ -1,3 +1,6 @@
+(async function () {
+await (window.sharedSyncReady || Promise.resolve());
+
 const tree = document.getElementById("careerTree");
 
 // Obtener elementos del modal
@@ -302,3 +305,4 @@ resetCareerBtn.addEventListener("click", () => {
     alert("Carrera reiniciada correctamente");
     location.reload();
 });
+})();
