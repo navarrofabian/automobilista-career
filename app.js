@@ -312,4 +312,8 @@ resetCareerBtn.addEventListener("click", () => {
     alert("Carrera reiniciada correctamente");
     location.reload();
 });
+
+window.addEventListener("shared-sync-updated", () => {
+    window.location.reload();
+});
 })();

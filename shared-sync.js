@@ -21,6 +21,10 @@
     let lastKnownRemoteUpdatedAt = null;
     let ui = null;
 
+    function emitSyncUpdated() {
+        window.dispatchEvent(new CustomEvent("shared-sync-updated"));
+    }
+
     function isConfigured() {
         return Boolean(
             window.supabase &&
@@ -76,6 +80,8 @@
         } finally {
             applyingRemoteState = false;
         }
+
+        emitSyncUpdated();
     }
 
     function ensureClient() {
@@ -145,16 +151,19 @@
 
     async function pollRemoteState() {
         const sessionCode = getSessionCode();
-        if (!sessionCode || !isConfigured() || applyingRemoteState || pendingLocalChanges) return;
+        if (!sessionCode || !isConfigured() || applyingRemoteState) return;
 
         try {
+            if (pendingLocalChanges) {
+                await saveRemoteState(true);
+            }
+
             const remote = await fetchRemoteState(sessionCode);
             if (!remote?.state?.data) return;
 
             if (remote.updated_at && remote.updated_at !== lastKnownRemoteUpdatedAt) {
                 applyShareableState(remote.state);
                 lastKnownRemoteUpdatedAt = remote.updated_at;
-                window.location.reload();
             }
         } catch (error) {
             console.error("Shared sync poll failed:", error);
@@ -319,11 +328,20 @@
 
     function startPolling() {
         clearInterval(pollTimer);
+        pollRemoteState().catch((error) => {
+            console.error("Shared sync initial poll failed:", error);
+        });
         pollTimer = setInterval(pollRemoteState, POLL_INTERVAL_MS);
     }
 
     function setupLifecycleSync() {
         document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") {
+                pollRemoteState().catch((error) => {
+                    console.error("Shared sync visible poll failed:", error);
+                });
+            }
+
             if (document.visibilityState === "hidden") {
                 saveRemoteState(true).catch((error) => {
                     console.error("Shared sync flush failed:", error);

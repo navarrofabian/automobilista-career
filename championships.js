@@ -57,6 +57,11 @@ let championshipRaces = JSON.parse(localStorage.getItem("races_" + currentCatego
 let drivers = JSON.parse(localStorage.getItem("drivers_" + currentCategory)) || [];
 let activeResultsRaceIndex = null;
 let pendingDetectedHumans = [];
+function normalizeAiMarkerText(value) {
+    return String(value || "")
+        .replace(/\(\s*[1lI|]\s*[aA]\s*\)/g, "(IA)")
+        .replace(/\b[1lI|]\s*[aA]\b/g, "IA");
+}
 const OCR_ENDPOINT = window.location.hostname === "localhost"
     ? "http://localhost:3000/upload"
     : "/.netlify/functions/upload";
@@ -79,12 +84,12 @@ function saveDriverAliasMap() {
 }
 
 function comparisonKey(value) {
-    return value
+    return normalizeAiMarkerText(value)
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/[“”"'`´]+/g, "")
-        .replace(/\(\s*ia\s*\)/gi, "")
-        .replace(/\bia\b/gi, "")
+        .replace(/\(\s*[i1l|]\s*a\s*\)/gi, "")
+        .replace(/\b[i1l|]\s*a\b/gi, "")
         .replace(/[^a-zA-Z0-9\s]/g, " ")
         .replace(/\s+/g, " ")
         .trim()
@@ -94,8 +99,9 @@ function comparisonKey(value) {
 function sanitizeEnteredName(rawName) {
     if (!rawName) return "";
 
-    const hasIaMarker = /\(\s*ia\s*\)|\bia\b/i.test(rawName);
-    let cleaned = rawName
+    const normalizedRawName = normalizeAiMarkerText(rawName);
+    const hasIaMarker = /\(\s*ia\s*\)|\bia\b/i.test(normalizedRawName);
+    let cleaned = normalizedRawName
         .replace(/[“”]/g, "\"")
         .replace(/[‘’]/g, "'")
         .replace(/^\s*\d+[\).\-\s]+/, "")
@@ -108,7 +114,11 @@ function sanitizeEnteredName(rawName) {
         .replace(/\s{2,}/g, " ")
         .trim();
 
-    cleaned = cleaned.replace(/\(\s*ia\s*\)/gi, "").replace(/\bia\b/gi, "").replace(/\s{2,}/g, " ").trim();
+    cleaned = cleaned
+        .replace(/\(\s*[i1l|]\s*a\s*\)/gi, "")
+        .replace(/\b[i1l|]\s*a\b/gi, "")
+        .replace(/\s{2,}/g, " ")
+        .trim();
 
     if (!cleaned) return "";
 
@@ -526,7 +536,7 @@ function updateHeroStats() {
 }
 
 function isAiDriver(name) {
-    return /\(\s*ia\s*\)/i.test(name || "");
+    return /\(\s*[i1l|]\s*a\s*\)/i.test(normalizeAiMarkerText(name || ""));
 }
 
 function isEmptyPlayerSlot(name) {
@@ -1112,4 +1122,8 @@ rebuildStandings();
 renderRaceList();
 updateChampionshipState();
 updateTeamPanel();
+
+window.addEventListener("shared-sync-updated", () => {
+    window.location.reload();
+});
 })();
