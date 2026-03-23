@@ -28,6 +28,10 @@ const saveResultsBtn = document.getElementById("saveResultsBtn");
 const closeResultsModalBtn = document.getElementById("closeResultsModalBtn");
 const ocrImageInput = document.getElementById("ocrImageInput");
 const ocrStatus = document.getElementById("ocrStatus");
+const playerDetectModal = document.getElementById("playerDetectModal");
+const playerDetectList = document.getElementById("playerDetectList");
+const closePlayerDetectBtn = document.getElementById("closePlayerDetectBtn");
+const savePlayerDetectBtn = document.getElementById("savePlayerDetectBtn");
 const categoryHero = document.getElementById("categoryHero");
 const categoryHeroImage = document.getElementById("categoryHeroImage");
 const categoryHeroIcon = document.getElementById("categoryHeroIcon");
@@ -47,11 +51,12 @@ const teamDriver2Bar = document.getElementById("teamDriver2Bar");
 
 raceSelectorContainer.classList.add("hidden");
 
-let coopDrivers = JSON.parse(localStorage.getItem("careerPlayers")) || ["Jugador 1", "Jugador 2"];
+let coopDrivers = JSON.parse(localStorage.getItem("careerPlayers")) || ["Vacío", "Vacío"];
 let championshipStarted = localStorage.getItem("championshipStarted_" + currentCategory) === "true";
 let championshipRaces = JSON.parse(localStorage.getItem("races_" + currentCategory)) || [];
 let drivers = JSON.parse(localStorage.getItem("drivers_" + currentCategory)) || [];
 let activeResultsRaceIndex = null;
+let pendingDetectedHumans = [];
 const OCR_ENDPOINT = window.location.hostname === "localhost"
     ? "http://localhost:3000/upload"
     : "/.netlify/functions/upload";
@@ -231,6 +236,7 @@ function saveResultsFromModal() {
     renderRaceList();
     updateTeamPanel();
     closeResultsModal();
+    maybeSuggestCareerPlayersFromResults(canonicalOrder);
     checkCareerProgress();
 }
 
@@ -516,6 +522,138 @@ function updateHeroStats() {
     heroProgress.innerText = `${getChampionshipProgress()}%`;
     const pos = getTeamPosition();
     heroTeamPosition.innerText = pos === "-" ? "-" : `P${pos}`;
+}
+
+function isAiDriver(name) {
+    return /\(\s*ia\s*\)/i.test(name || "");
+}
+
+function isEmptyPlayerSlot(name) {
+    return !name || /^vac[ií]o$/i.test(name);
+}
+
+function autoAssignCareerPlayersFromResults(resultsOrder) {
+    const detectedHumans = resultsOrder
+        .filter(Boolean)
+        .filter((name) => !isAiDriver(name));
+
+    if (!detectedHumans.length) return;
+
+    const currentPlayers = Array.isArray(coopDrivers) ? [...coopDrivers] : ["Vacío", "Vacío"];
+    const nextPlayers = [...currentPlayers];
+
+    detectedHumans.forEach((name) => {
+        const alreadyAssigned = nextPlayers.some(
+            (player) => comparisonKey(player) === comparisonKey(name)
+        );
+
+        if (alreadyAssigned) return;
+
+        const emptySlotIndex = nextPlayers.findIndex((player) => isEmptyPlayerSlot(player));
+        if (emptySlotIndex >= 0) {
+            nextPlayers[emptySlotIndex] = name;
+        }
+    });
+
+    const changed =
+        comparisonKey(nextPlayers[0] || "") !== comparisonKey(currentPlayers[0] || "") ||
+        comparisonKey(nextPlayers[1] || "") !== comparisonKey(currentPlayers[1] || "");
+
+    if (!changed) return;
+
+    coopDrivers = nextPlayers;
+    localStorage.setItem("careerPlayers", JSON.stringify(coopDrivers));
+    syncHeaderPlayers();
+    preloadPlayerInputs();
+}
+
+function getDetectedHumanCandidates(resultsOrder) {
+    return resultsOrder
+        .filter(Boolean)
+        .filter((name) => !isAiDriver(name));
+}
+
+function closePlayerDetectModal() {
+    playerDetectModal.classList.add("hidden");
+    pendingDetectedHumans = [];
+}
+
+function maybeSuggestCareerPlayersFromResults(resultsOrder) {
+    const currentPlayers = Array.isArray(coopDrivers) ? [...coopDrivers] : ["VacÃ­o", "VacÃ­o"];
+    const emptySlots = currentPlayers.filter((player) => isEmptyPlayerSlot(player)).length;
+    if (!emptySlots) return;
+
+    const candidates = getDetectedHumanCandidates(resultsOrder).filter((name) => {
+        return !currentPlayers.some((player) => comparisonKey(player) === comparisonKey(name));
+    });
+
+    if (!candidates.length) return;
+
+    pendingDetectedHumans = candidates;
+    playerDetectList.innerHTML = "";
+
+    candidates.forEach((name, index) => {
+        const row = document.createElement("label");
+        row.className = "detectPlayerRow";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = name;
+        checkbox.checked = index < Math.min(emptySlots, 2);
+
+        const text = document.createElement("span");
+        text.className = "detectPlayerName";
+        text.innerText = name;
+
+        row.appendChild(checkbox);
+        row.appendChild(text);
+        playerDetectList.appendChild(row);
+    });
+
+    playerDetectModal.dataset.maxSelections = String(Math.min(emptySlots, 2));
+    playerDetectModal.classList.remove("hidden");
+}
+
+function enforceDetectSelectionLimit() {
+    const maxSelections = Number(playerDetectModal.dataset.maxSelections || "2");
+    const checked = [...playerDetectList.querySelectorAll('input[type="checkbox"]:checked')];
+
+    if (checked.length <= maxSelections) return;
+    checked[checked.length - 1].checked = false;
+}
+
+function saveDetectedPlayersSelection() {
+    const selected = [...playerDetectList.querySelectorAll('input[type="checkbox"]:checked')]
+        .map((input) => input.value)
+        .slice(0, 2);
+
+    if (!selected.length) {
+        closePlayerDetectModal();
+        return;
+    }
+
+    const currentPlayers = Array.isArray(coopDrivers) ? [...coopDrivers] : ["VacÃ­o", "VacÃ­o"];
+    const nextPlayers = [...currentPlayers];
+
+    selected.forEach((name) => {
+        const alreadyAssigned = nextPlayers.some(
+            (player) => comparisonKey(player) === comparisonKey(name)
+        );
+
+        if (alreadyAssigned) return;
+
+        const emptySlotIndex = nextPlayers.findIndex((player) => isEmptyPlayerSlot(player));
+        if (emptySlotIndex >= 0) {
+            nextPlayers[emptySlotIndex] = name;
+        }
+    });
+
+    coopDrivers = nextPlayers.slice(0, 2);
+    localStorage.setItem("careerPlayers", JSON.stringify(coopDrivers));
+    syncHeaderPlayers();
+    preloadPlayerInputs();
+    updateTeamPanel();
+    closePlayerDetectModal();
 }
 
 function updateTeamPanel() {
@@ -868,6 +1006,14 @@ resultsModal.addEventListener("click", (event) => {
     }
 });
 
+playerDetectModal.addEventListener("click", (event) => {
+    if (event.target === playerDetectModal) {
+        closePlayerDetectModal();
+    }
+});
+
+playerDetectList.addEventListener("change", enforceDetectSelectionLimit);
+
 ocrImageInput.addEventListener("change", async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -925,6 +1071,8 @@ document.addEventListener("keydown", (event) => {
 
 closeResultsModalBtn.addEventListener("click", closeResultsModal);
 saveResultsBtn.addEventListener("click", saveResultsFromModal);
+closePlayerDetectBtn.addEventListener("click", closePlayerDetectModal);
+savePlayerDetectBtn.addEventListener("click", saveDetectedPlayersSelection);
 
 startChampionshipBtn.addEventListener("click", () => {
     championshipStarted = true;

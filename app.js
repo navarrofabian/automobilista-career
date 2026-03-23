@@ -112,7 +112,8 @@ function toggleHeaderMenu() {
 
 // Mostrar modal solo si no hay jugadores guardados
 if (!coopPlayers || coopPlayers.length < 2 || !coopPlayers[0] || !coopPlayers[1]) {
-    openPlayerModal();
+    syncPlayerNames();
+    preloadPlayerInputs();
 } else {
     syncPlayerNames();
     preloadPlayerInputs();

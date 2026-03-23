@@ -830,6 +830,26 @@ width:100%;
 box-sizing:border-box;
 }
 
+.detectPlayerRow{
+display:flex;
+align-items:center;
+gap:12px;
+padding:14px;
+border-radius:12px;
+background:#171717;
+border:1px solid rgba(255,255,255,0.05);
+}
+
+.detectPlayerRow input[type="checkbox"]{
+width:18px;
+height:18px;
+accent-color:#00c853;
+}
+
+.detectPlayerName{
+font-weight:600;
+}
+
 .resultsModalActions{
 display:flex;
 justify-content:flex-end;
