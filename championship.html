@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Championship</title>
+<link rel="stylesheet" href="style-championship.css">
+</head>
+<body>
+
+<div id="unlockPopup" class="unlockPopup hidden">
+  <div class="unlockBox">
+    <h2>NUEVO NIVEL DESBLOQUEADO</h2>
+    <button onclick="closeUnlockPopup()">CONTINUAR</button>
+  </div>
+</div>
+
+<div class="headerShell">
+  <header class="topBar">
+    <div class="leftHeader">
+      <a href="index.html">
+        <img src="img/automobilista.png" class="logo" alt="Automobilista logo">
+      </a>
+    </div>
+
+    <div class="centerHeader" aria-hidden="true"></div>
+
+    <div class="rightHeader">
+      <div class="playersTitle">PILOTOS</div>
+      <div class="playersList">
+        <div class="playerSlot">
+          <div class="playerAvatar">1</div>
+          <div class="playerName" id="player1Name">Vacío</div>
+        </div>
+        <div class="playerSlot">
+          <div class="playerAvatar">2</div>
+          <div class="playerName" id="player2Name">Vacío</div>
+        </div>
+      </div>
+      <div class="headerMenu">
+        <button type="button" id="headerMenuBtn" class="headerMenuBtn" aria-haspopup="true" aria-expanded="false" aria-controls="headerDropdown">
+          Menú
+        </button>
+        <div id="headerDropdown" class="headerDropdown" hidden>
+          <button type="button" id="editPlayersBtn" class="dropdownAction">Editar pilotos</button>
+          <button type="button" id="resetCareerBtn" class="dropdownAction dangerAction">Reiniciar carrera</button>
+        </div>
+      </div>
+    </div>
+  </header>
+</div>
+
+<div id="playerModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="playerModalTitle">
+  <div class="modalContent">
+    <h2 id="playerModalTitle">Ingresa los nombres de los jugadores</h2>
+    <label for="player1Input">Jugador 1</label>
+    <input type="text" id="player1Input" placeholder="Jugador 1" autocomplete="off">
+    <label for="player2Input">Jugador 2</label>
+    <input type="text" id="player2Input" placeholder="Jugador 2" autocomplete="off">
+    <button type="button" id="savePlayersBtn">Guardar</button>
+  </div>
+</div>
+
+<div id="resultsModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="resultsModalTitle">
+  <div class="modalContent resultsModalContent">
+    <div class="resultsModalHeader">
+      <div>
+        <h2 id="resultsModalTitle">Cargar resultados</h2>
+        <p id="resultsModalSubtitle"></p>
+      </div>
+      <div class="resultsModalHeaderActions">
+        <label for="ocrImageInput" class="ocrUploadLabel">Subir imagen</label>
+        <input type="file" id="ocrImageInput" accept="image/*" hidden>
+        <button type="button" id="closeResultsModalBtn" class="secondaryModalBtn">Cerrar</button>
+      </div>
+    </div>
+    <p id="ocrStatus" class="ocrStatus hidden"></p>
+    <div id="resultsForm" class="resultsForm"></div>
+    <div class="resultsModalActions">
+      <button type="button" id="saveResultsBtn">Guardar resultados</button>
+    </div>
+  </div>
+</div>
+
+<div class="mainContainer">
+  <section id="categoryHero" class="categoryHero">
+    <img id="categoryHeroImage" class="categoryHeroImage" alt="">
+    <div class="categoryHeroOverlay"></div>
+    <div class="categoryHeroContent">
+      <img id="categoryHeroIcon" class="categoryHeroIcon" alt="">
+      <div class="categoryHeroText">
+        <span class="categoryHeroLabel">Campeonato</span>
+        <h1 id="categoryHeroTitle"></h1>
+        <div class="categoryHeroStats">
+          <div class="heroStatCard">
+            <span class="heroStatLabel">Estado</span>
+            <strong id="heroStatus">Sin iniciar</strong>
+          </div>
+          <div class="heroStatCard">
+            <span class="heroStatLabel">Fechas</span>
+            <strong id="heroRounds">0</strong>
+          </div>
+          <div class="heroStatCard">
+            <span class="heroStatLabel">Progreso</span>
+            <strong id="heroProgress">0%</strong>
+          </div>
+          <div class="heroStatCard">
+            <span class="heroStatLabel">Posición del equipo</span>
+            <strong id="heroTeamPosition">-</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="championshipDashboard">
+    <div class="champControlsPanel">
+      <div class="sectionHeading">
+        <span class="sectionEyebrow">Gestión</span>
+        <h2>Control del campeonato</h2>
+      </div>
+      <div class="champControls">
+        <button id="startChampionshipBtn">Iniciar campeonato</button>
+        <button id="addRaceBtn">Agregar fecha</button>
+        <button id="resetChampionshipBtn">Reiniciar campeonato</button>
+      </div>
+    </div>
+
+    <div class="teamPanel">
+      <div class="sectionHeading">
+        <span class="sectionEyebrow">Equipo</span>
+        <h2>Resumen del equipo</h2>
+      </div>
+
+      <div class="teamOverviewGrid">
+        <div class="teamOverviewCard">
+          <span class="overviewLabel">Promedio de puntos</span>
+          <strong id="teamAverage">0</strong>
+        </div>
+        <div class="teamOverviewCard">
+          <span class="overviewLabel">Posición actual</span>
+          <strong id="teamPosition">-</strong>
+        </div>
+      </div>
+
+      <div class="teamDriversBars">
+        <div class="teamDriverCard">
+          <div class="teamDriverHeader">
+            <span class="teamDriverName" id="teamDriver1"></span>
+            <span class="teamDriverPoints" id="teamDriver1Pts"></span>
+          </div>
+          <div class="teamDriverBarTrack">
+            <div id="teamDriver1Bar" class="teamDriverBarFill"></div>
+          </div>
+        </div>
+
+        <div class="teamDriverCard">
+          <div class="teamDriverHeader">
+            <span class="teamDriverName" id="teamDriver2"></span>
+            <span class="teamDriverPoints" id="teamDriver2Pts"></span>
+          </div>
+          <div class="teamDriverBarTrack">
+            <div id="teamDriver2Bar" class="teamDriverBarFill"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div id="raceList" class="raceList"></div>
+
+  <div id="standingsContainer" class="standingsContainer hidden">
+    <h2>Clasificación del campeonato</h2>
+    <table id="standings">
+      <thead>
+        <tr>
+          <th>Pos</th>
+          <th>Piloto</th>
+          <th>Puntos</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</div>
+
+<div id="raceSelectorContainer" class="raceSelector hidden">
+  <h2>Seleccionar circuito</h2>
+  <div id="raceSelectorGrid" class="raceGrid"></div>
+  <button id="closeRaceSelector">Cerrar</button>
+</div>
+
+<footer class="footer">
+  <img src="img/reiza_footer.png" class="reizaFooter" alt="Reiza Studios">
+</footer>
+
+<script src="data.js"></script>
+<script src="championships.js"></script>
+
+</body>
+</html>
