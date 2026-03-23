@@ -368,6 +368,21 @@ async function uploadImageForOcr(file) {
     return response.json();
 }
 
+async function runBrowserOcr(file) {
+    if (!window.Tesseract?.createWorker) {
+        throw new Error("Browser OCR unavailable");
+    }
+
+    const worker = await window.Tesseract.createWorker("spa+eng");
+
+    try {
+        const result = await worker.recognize(file);
+        return { text: result.data.text || "" };
+    } finally {
+        await worker.terminate();
+    }
+}
+
 function toggleHeaderMenu() {
     const shouldOpen = headerDropdown.hidden;
     headerDropdown.hidden = !shouldOpen;
@@ -857,10 +872,19 @@ ocrImageInput.addEventListener("change", async (event) => {
         const data = await uploadImageForOcr(file);
         applyOcrTextToResults(data.text || "");
     } catch (_error) {
-        ocrStatus.innerText = window.location.hostname === "localhost"
-            ? "No se pudo conectar con el backend OCR. Verifica que el servidor Node esté corriendo en http://localhost:3000."
-            : "No se pudo procesar la imagen en Netlify Functions. Revisa el deploy y los logs de la función upload.";
-        ocrStatus.classList.remove("hidden");
+        try {
+            ocrStatus.innerText = "El OCR del servidor falló. Probando OCR local en el navegador...";
+            ocrStatus.classList.remove("hidden");
+
+            const fallbackData = await runBrowserOcr(file);
+            applyOcrTextToResults(fallbackData.text || "");
+            ocrStatus.innerText = "OCR completado en el navegador. Revisa los nombres antes de guardar.";
+        } catch (_fallbackError) {
+            ocrStatus.innerText = window.location.hostname === "localhost"
+                ? "No se pudo conectar con el backend OCR y también falló el OCR local. Verifica que el servidor Node esté corriendo en http://localhost:3000."
+                : "Falló Netlify Functions y también el OCR local del navegador. Revisa el deploy, la consola del navegador y los logs de la función upload.";
+            ocrStatus.classList.remove("hidden");
+        }
     }
 });
 
