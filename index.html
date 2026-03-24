@@ -3,74 +3,48 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Automobilista Career</title>
-<link rel="stylesheet" href="style-index.css">
-<link rel="stylesheet" href="shared-sync.css">
+<title>Modo Carrera</title>
+<link rel="stylesheet" href="style-welcome.css">
 </head>
 <body>
 
-<div class="headerShell">
-<header class="topBar">
+<main class="welcomePage">
+  <section class="welcomeHero">
+    <img src="img/automobilista.png" class="welcomeLogo" alt="Automobilista logo">
+    <span class="welcomeKicker">Automobilista Career</span>
+    <h1>Bienvenido al modo carrera</h1>
+    <p class="welcomeLead">
+      Ingresá tu nombre de usuario y el código de sincronización para cargar el progreso compartido
+      y sumarte automáticamente a los jugadores del campeonato cuando corresponda.
+    </p>
+  </section>
 
-<div class="leftHeader">
-  <img src="img/automobilista.png" class="logo" alt="Automobilista logo">
-</div>
-<div class="rightHeader">
-  <div class="playersTitle">PILOTOS</div>
-  <div class="playersList">
-    <div class="playerSlot">
-      <div class="playerAvatar">1</div>
-      <div class="playerName" id="player1Name">Vacío</div>
+  <section class="welcomePanel">
+    <div class="welcomeCard">
+      <h2>Iniciar sesión compartida</h2>
+      <p id="welcomeStatus" class="welcomeStatus hidden"></p>
+
+      <label for="welcomeUsernameInput">Nombre de usuario</label>
+      <input type="text" id="welcomeUsernameInput" placeholder="Ej: Fabian" autocomplete="off">
+
+      <label for="welcomeSessionInput">Código de sincronización</label>
+      <input type="text" id="welcomeSessionInput" placeholder="Ej: carrera-amigos-01" autocomplete="off">
+
+      <div class="welcomeInfo">
+        <strong>Qué pasa al entrar</strong>
+        <span>Si tu usuario ya existía, solo se sincroniza el progreso. Si no existía y hay lugar, se agrega automáticamente como jugador.</span>
+      </div>
+
+      <div class="welcomeActions">
+        <button type="button" id="startCareerBtn">Entrar al modo carrera</button>
+      </div>
     </div>
-    <div class="playerSlot">
-      <div class="playerAvatar">2</div>
-      <div class="playerName" id="player2Name">Vacío</div>
-    </div>
-  </div>
-  <div class="headerMenu">
-    <button type="button" id="headerMenuBtn" class="headerMenuBtn" aria-haspopup="true" aria-expanded="false" aria-controls="headerDropdown">
-      Menú
-    </button>
-    <div id="headerDropdown" class="headerDropdown" hidden>
-      <button type="button" id="editPlayersBtn" class="dropdownAction">Editar pilotos</button>
-      <button type="button" id="resetCareerBtn" class="dropdownAction dangerAction">Reiniciar carrera</button>
-    </div>
-  </div>
+  </section>
+</main>
 
-</div>
-
-</header>
-</div>
-
-<!-- Modal para elegir jugadores -->
-<div id="playerModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="playerModalTitle">
-  <div class="modalContent">
-    <h2 id="playerModalTitle">Ingresa los nombres de los jugadores</h2>
-    <label for="player1Input">Jugador 1</label>
-    <input type="text" id="player1Input" placeholder="Jugador 1" autocomplete="off">
-    <label for="player2Input">Jugador 2</label>
-    <input type="text" id="player2Input" placeholder="Jugador 2" autocomplete="off">
-    <button type="button" id="savePlayersBtn">Guardar</button>
-  </div>
-</div>
-<div id="verticalProgress">
-    <div id="verticalProgressFill">
-        <span id="verticalProgressText">0%</span>
-    </div>
-</div>
-<div class="careerTree" id="careerTree"></div>
-
-<footer class="footer">
-  <img src="img/reiza_footer.png" class="reizaFooter" alt="Reiza Studios">
-</footer>
-
-
-<script src="data.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-config.js"></script>
-<script src="shared-sync.js"></script>
-<script src="app.js"></script>
-
+<script src="welcome.js"></script>
 
 </body>
 </html>

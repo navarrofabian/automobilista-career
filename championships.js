@@ -1138,4 +1138,5 @@ function refreshChampionshipViewFromStorage() {
 }
 
 refreshChampionshipViewFromStorage();
+window.addEventListener("shared-sync-updated", refreshChampionshipViewFromStorage);
 })();

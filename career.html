@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Automobilista Career</title>
+<link rel="stylesheet" href="style-index.css">
+<link rel="stylesheet" href="shared-sync.css">
+</head>
+<body>
+
+<div class="headerShell">
+<header class="topBar">
+
+<div class="leftHeader">
+  <img src="img/automobilista.png" class="logo" alt="Automobilista logo">
+</div>
+<div class="rightHeader">
+  <div class="playersTitle">PILOTOS</div>
+  <div class="playersList">
+    <div class="playerSlot">
+      <div class="playerAvatar">1</div>
+      <div class="playerName" id="player1Name">Vacío</div>
+    </div>
+    <div class="playerSlot">
+      <div class="playerAvatar">2</div>
+      <div class="playerName" id="player2Name">Vacío</div>
+    </div>
+  </div>
+  <div class="headerMenu">
+    <button type="button" id="headerMenuBtn" class="headerMenuBtn" aria-haspopup="true" aria-expanded="false" aria-controls="headerDropdown">
+      Menú
+    </button>
+    <div id="headerDropdown" class="headerDropdown" hidden>
+      <button type="button" id="editPlayersBtn" class="dropdownAction">Editar pilotos</button>
+      <button type="button" id="resetCareerBtn" class="dropdownAction dangerAction">Reiniciar carrera</button>
+    </div>
+  </div>
+
+</div>
+
+</header>
+</div>
+
+<div id="playerModal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="playerModalTitle">
+  <div class="modalContent">
+    <h2 id="playerModalTitle">Ingresa los nombres de los jugadores</h2>
+    <label for="player1Input">Jugador 1</label>
+    <input type="text" id="player1Input" placeholder="Jugador 1" autocomplete="off">
+    <label for="player2Input">Jugador 2</label>
+    <input type="text" id="player2Input" placeholder="Jugador 2" autocomplete="off">
+    <button type="button" id="savePlayersBtn">Guardar</button>
+  </div>
+</div>
+
+<div id="verticalProgress">
+    <div id="verticalProgressFill">
+        <span id="verticalProgressText">0%</span>
+    </div>
+</div>
+<div class="careerTree" id="careerTree"></div>
+
+<footer class="footer">
+  <img src="img/reiza_footer.png" class="reizaFooter" alt="Reiza Studios">
+</footer>
+
+<script src="data.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<script src="shared-sync.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>

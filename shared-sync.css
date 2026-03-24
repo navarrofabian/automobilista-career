@@ -41,6 +41,26 @@
     line-height:1.35;
 }
 
+.openSyncPromptBtn{
+    margin-top:6px;
+    align-self:flex-start;
+    padding:8px 12px;
+    border:1px solid rgba(127,182,255,.26);
+    border-radius:10px;
+    background:rgba(127,182,255,.12);
+    color:#eaf4ff;
+    font-size:12px;
+    font-weight:600;
+    cursor:pointer;
+    transition:background .18s ease, border-color .18s ease, transform .18s ease;
+}
+
+.openSyncPromptBtn:hover{
+    background:rgba(127,182,255,.2);
+    border-color:rgba(127,182,255,.4);
+    transform:translateY(-1px);
+}
+
 .syncSummaryLabel{
     font-size:11px;
     letter-spacing:.08em;
@@ -56,6 +76,51 @@
 
 .sharedSyncModalContent{
     width:min(520px, calc(100vw - 32px));
+}
+
+.syncGateActive{
+    overflow:hidden;
+}
+
+#sharedSyncModal.syncGateMode{
+    position:fixed;
+    inset:0;
+    z-index:5000;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    background:linear-gradient(180deg, rgba(5,9,13,.86), rgba(9,14,20,.94));
+    backdrop-filter:blur(10px);
+}
+
+#sharedSyncModal.syncGateMode.hidden{
+    display:none;
+}
+
+#sharedSyncModal.syncGateMode .sharedSyncModalContent{
+    width:min(560px, calc(100vw - 32px));
+    padding:28px;
+    border:1px solid rgba(127,182,255,.22);
+    border-radius:22px;
+    background:linear-gradient(180deg, rgba(17,24,33,.98), rgba(9,14,19,.98));
+    box-shadow:0 26px 70px rgba(0,0,0,.42);
+}
+
+#sharedSyncModal.syncGateMode .syncAccessTitle{
+    margin:0 0 10px;
+    font-size:34px;
+    line-height:1.05;
+    color:#f6fbff;
+}
+
+#sharedSyncModal.syncGateMode .syncIntro{
+    margin-bottom:18px;
+    font-size:15px;
+}
+
+#sharedSyncModal.syncGateMode #closeSharedSyncBtn{
+    display:none;
 }
 
 .syncKicker{

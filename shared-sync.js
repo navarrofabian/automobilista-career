@@ -1,5 +1,5 @@
 (function () {
-    const DEPLOY_VERSION = "2026-03-23-user-sync-v1";
+    const DEPLOY_VERSION = "2026-03-24-shared-sync-lite";
     const SESSION_KEY = "sharedCareerSessionCode";
     const USER_KEY = "sharedCareerUsername";
     const SHAREABLE_EXACT_KEYS = new Set([
@@ -13,12 +13,14 @@
         "championshipStarted_",
         "driverAliases_"
     ];
+    const POLL_INTERVAL_MS = 12000;
 
     let client = null;
     let applyingRemoteState = false;
     let pendingLocalChanges = false;
     let saveTimer = null;
-    let ui = null;
+    let pollTimer = null;
+    let lastKnownRemoteUpdatedAt = null;
 
     function isConfigured() {
         return Boolean(
@@ -38,10 +40,6 @@
 
     function hasIdentity() {
         return Boolean(getSessionCode() && getUsername());
-    }
-
-    function sameName(a, b) {
-        return String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
     }
 
     function isShareableKey(key) {
@@ -98,8 +96,9 @@
         return client;
     }
 
-    async function fetchRemoteState(sessionCode) {
+    async function fetchRemoteState() {
         const supabase = ensureClient();
+        const sessionCode = getSessionCode();
         if (!supabase || !sessionCode) return null;
 
         const { data, error } = await supabase
@@ -132,6 +131,7 @@
         if (error) throw error;
 
         pendingLocalChanges = false;
+        lastKnownRemoteUpdatedAt = payload.updated_at;
     }
 
     function scheduleSave() {
@@ -142,9 +142,6 @@
         saveTimer = setTimeout(() => {
             saveRemoteState().catch((error) => {
                 console.error("Shared sync save failed:", error);
-                if (ui) {
-                    ui.setStatus("No se pudo guardar el progreso compartido. Revisa conexión o permisos.");
-                }
             });
         }, 600);
     }
@@ -167,290 +164,101 @@
         };
     }
 
-    function ensureUserRegistered(username) {
-        const currentPlayers = JSON.parse(localStorage.getItem("careerPlayers")) || [];
-        const cleanedPlayers = currentPlayers.filter((name) => String(name || "").trim());
-
-        if (cleanedPlayers.some((name) => sameName(name, username))) {
-            localStorage.setItem("careerPlayers", JSON.stringify(cleanedPlayers.slice(0, 2)));
-            return { added: false, full: false, players: cleanedPlayers.slice(0, 2) };
-        }
-
-        if (cleanedPlayers.length >= 2) {
-            return { added: false, full: true, players: cleanedPlayers.slice(0, 2) };
-        }
-
-        const nextPlayers = [...cleanedPlayers, username].slice(0, 2);
-        localStorage.setItem("careerPlayers", JSON.stringify(nextPlayers));
-        return { added: true, full: false, players: nextPlayers };
-    }
-
-    function ensureIdentityPrompt() {
-        if (!isConfigured() || hasIdentity()) return;
-        if (ui) {
-            ui.openModal(true);
-            return;
-        }
-
-        window.setTimeout(ensureIdentityPrompt, 250);
-    }
-
-    function injectSyncUi() {
+    function renderIdentityUi() {
         const headerDropdown = document.getElementById("headerDropdown");
         const rightHeader = document.querySelector(".rightHeader");
-        const existingModal = document.getElementById("sharedSyncModal");
-        if (!headerDropdown || !rightHeader || existingModal) return;
+        if (!headerDropdown || !rightHeader) return;
 
-        const syncButton = document.createElement("button");
-        syncButton.type = "button";
-        syncButton.className = "dropdownAction";
-        syncButton.id = "openSharedSyncBtn";
-        syncButton.innerText = "Usuario y sesión";
-        headerDropdown.insertBefore(syncButton, headerDropdown.firstChild);
-
-        const syncSummary = document.createElement("div");
-        syncSummary.id = "sharedSyncSummary";
-        syncSummary.className = "sharedSyncSummary";
-        headerDropdown.insertBefore(syncSummary, syncButton);
-
-        const syncHeaderCard = document.createElement("div");
-        syncHeaderCard.id = "sharedSyncHeaderCard";
-        syncHeaderCard.className = "sharedSyncHeaderCard";
-        rightHeader.insertBefore(syncHeaderCard, rightHeader.querySelector(".headerMenu"));
-
-        const modal = document.createElement("div");
-        modal.id = "sharedSyncModal";
-        modal.className = "modal hidden";
-        modal.innerHTML = `
-  <div class="modalContent sharedSyncModalContent">
-    <span class="syncKicker">Modo compartido</span>
-    <h2>Entrar a la sesión</h2>
-    <p class="syncIntro">Ingresá tu nombre de usuario y el código de sincronización. Si tu nombre todavía no está en esta carrera, se agrega automáticamente como jugador.</p>
-    <p id="sharedSyncStatus" class="syncStatus hidden"></p>
-    <div class="syncField">
-      <label for="sharedUsernameInput">Nombre de usuario</label>
-      <input type="text" id="sharedUsernameInput" placeholder="Ej: Fabian" autocomplete="off">
-    </div>
-    <div class="syncField">
-      <label for="sharedSessionCodeInput">Código de sincronización</label>
-      <input type="text" id="sharedSessionCodeInput" placeholder="Ej: carrera-amigos-01" autocomplete="off">
-    </div>
-    <div class="syncInfoCard">
-      <strong>Cómo funciona</strong>
-      <span>Si el usuario ya estaba registrado, solo carga el progreso compartido. Si no estaba, intenta sumarlo a los pilotos del campeonato.</span>
-    </div>
-    <div class="syncActions">
-      <button type="button" id="closeSharedSyncBtn" class="syncSecondaryBtn">Cerrar</button>
-      <button type="button" id="disconnectSharedSyncBtn" class="syncSecondaryBtn">Salir de la sesión</button>
-      <button type="button" id="saveSharedSyncBtn">Entrar</button>
-    </div>
-  </div>
-`;
-
-        document.body.appendChild(modal);
-
-        let versionBadge = document.getElementById("deployVersionBadge");
-        if (!versionBadge) {
-            versionBadge = document.createElement("div");
-            versionBadge.id = "deployVersionBadge";
-            versionBadge.className = "deployVersionBadge";
-            versionBadge.innerText = `Deploy ${DEPLOY_VERSION}`;
-            document.body.appendChild(versionBadge);
+        if (!document.getElementById("deployVersionBadge")) {
+            const badge = document.createElement("div");
+            badge.id = "deployVersionBadge";
+            badge.className = "deployVersionBadge";
+            badge.innerText = `Deploy ${DEPLOY_VERSION}`;
+            document.body.appendChild(badge);
         }
 
-        const modalElement = document.getElementById("sharedSyncModal");
-        const headerCardElement = document.getElementById("sharedSyncHeaderCard");
-        const summaryElement = document.getElementById("sharedSyncSummary");
-        const statusElement = document.getElementById("sharedSyncStatus");
-        const usernameInput = document.getElementById("sharedUsernameInput");
-        const sessionInput = document.getElementById("sharedSessionCodeInput");
-        const closeButton = document.getElementById("closeSharedSyncBtn");
-        const disconnectButton = document.getElementById("disconnectSharedSyncBtn");
-        const saveButton = document.getElementById("saveSharedSyncBtn");
-
-        function updateSummary() {
-            const username = getUsername();
-            const sessionCode = getSessionCode();
-
-            if (!username || !sessionCode) {
-                summaryElement.innerHTML = `
-                    <span class="syncSummaryLabel">Sin conexión</span>
-                    <strong class="syncSummaryValue">Ingresá usuario y código para compartir el progreso.</strong>
-                `;
-                headerCardElement.innerHTML = `
-                    <span class="syncHeaderLabel">Sesión compartida</span>
-                    <strong class="syncHeaderValue">Sin conectar</strong>
-                    <span class="syncHeaderMeta">Todavía no ingresaste usuario ni código.</span>
-                `;
-                return;
-            }
-
-            summaryElement.innerHTML = `
-                <span class="syncSummaryLabel">Sesión activa</span>
-                <strong class="syncSummaryValue">${username} · ${sessionCode}</strong>
-            `;
-            headerCardElement.innerHTML = `
-                <span class="syncHeaderLabel">Sesión compartida</span>
-                <strong class="syncHeaderValue">${username}</strong>
-                <span class="syncHeaderMeta">Código: ${sessionCode}</span>
-            `;
+        let summary = document.getElementById("sharedSyncSummary");
+        if (!summary) {
+            summary = document.createElement("div");
+            summary.id = "sharedSyncSummary";
+            summary.className = "sharedSyncSummary";
+            headerDropdown.insertBefore(summary, headerDropdown.firstChild);
         }
 
-        function setStatus(message, visible = true, tone = "") {
-            statusElement.innerText = message;
-            statusElement.className = `syncStatus${visible ? "" : " hidden"}${tone ? ` ${tone}` : ""}`;
+        let headerCard = document.getElementById("sharedSyncHeaderCard");
+        if (!headerCard) {
+            headerCard = document.createElement("div");
+            headerCard.id = "sharedSyncHeaderCard";
+            headerCard.className = "sharedSyncHeaderCard";
+            rightHeader.insertBefore(headerCard, rightHeader.querySelector(".headerMenu"));
         }
 
-        function openModal(required = false) {
-            usernameInput.value = getUsername();
-            sessionInput.value = getSessionCode();
-            modalElement.dataset.required = required ? "true" : "false";
-            setStatus(required ? "Completá usuario y código de sincronización antes de seguir." : "", required);
-            modalElement.classList.remove("hidden");
-            requestAnimationFrame(() => {
-                if (!usernameInput.value) usernameInput.focus();
-                else sessionInput.focus();
-            });
-        }
+        const username = getUsername();
+        const sessionCode = getSessionCode();
 
-        function closeModal() {
-            if (modalElement.dataset.required === "true" && !hasIdentity()) return;
-            modalElement.classList.add("hidden");
-        }
+        summary.innerHTML = `
+            <span class="syncSummaryLabel">Sesion activa</span>
+            <strong class="syncSummaryValue">${username} · ${sessionCode}</strong>
+            <a class="openSyncPromptBtn" href="index.html">Cambiar usuario o sesion</a>
+        `;
 
-        async function connectIdentity() {
-            const username = usernameInput.value.trim();
-            const sessionCode = sessionInput.value.trim();
+        headerCard.innerHTML = `
+            <span class="syncHeaderLabel">Sesion compartida</span>
+            <strong class="syncHeaderValue">${username}</strong>
+            <span class="syncHeaderMeta">Codigo: ${sessionCode}</span>
+            <a class="openSyncPromptBtn" href="index.html">Cambiar sesion</a>
+        `;
+    }
 
-            if (!username) {
-                setStatus("Ingresá tu nombre de usuario.");
-                return false;
+    async function refreshRemoteState() {
+        if (!hasIdentity() || !isConfigured() || applyingRemoteState || pendingLocalChanges) return;
+
+        try {
+            const remote = await fetchRemoteState();
+            if (!remote?.state?.data) return;
+            if (remote.updated_at && remote.updated_at !== lastKnownRemoteUpdatedAt) {
+                applyShareableState(remote.state);
+                lastKnownRemoteUpdatedAt = remote.updated_at;
+                window.dispatchEvent(new CustomEvent("shared-sync-updated"));
             }
-
-            if (!sessionCode) {
-                setStatus("Ingresá el código de sincronización.");
-                return false;
-            }
-
-            if (!isConfigured()) {
-                setStatus("Completa supabase-config.js con tu URL y publishable key antes de conectar.");
-                return false;
-            }
-
-            localStorage.setItem(USER_KEY, username);
-            localStorage.setItem(SESSION_KEY, sessionCode);
-            updateSummary();
-            setStatus("Conectando y sincronizando...");
-
-            try {
-                const remote = await fetchRemoteState(sessionCode);
-
-                if (remote?.state?.data && Object.keys(remote.state.data).length > 0) {
-                    applyShareableState(remote.state);
-                }
-
-                const registration = ensureUserRegistered(username);
-                pendingLocalChanges = true;
-                await saveRemoteState(true);
-
-                updateSummary();
-
-                if (registration.full) {
-                    setStatus("La sesión ya tenía dos jugadores registrados. Se sincronizó el progreso, pero tu usuario no se agregó como piloto.", true, "warning");
-                    modalElement.classList.add("hidden");
-                    window.setTimeout(() => window.location.reload(), 250);
-                    return true;
-                }
-
-                if (registration.added) {
-                    setStatus("Usuario agregado al campeonato y progreso sincronizado.", true, "success");
-                } else {
-                    setStatus("Usuario reconocido. Progreso sincronizado correctamente.", true, "success");
-                }
-
-                modalElement.classList.add("hidden");
-                window.setTimeout(() => window.location.reload(), 250);
-                return true;
-            } catch (error) {
-                console.error("Shared sync connect failed:", error);
-                setStatus("No se pudo conectar con Supabase. Revisa la tabla, la URL, la key y las políticas.");
-                return false;
-            }
-        }
-
-        syncButton.addEventListener("click", () => {
-            openModal(false);
-        });
-
-        closeButton.addEventListener("click", closeModal);
-
-        disconnectButton.addEventListener("click", () => {
-            localStorage.removeItem(USER_KEY);
-            localStorage.removeItem(SESSION_KEY);
-            updateSummary();
-            setStatus("Se cerró la sesión compartida.");
-            openModal(true);
-        });
-
-        saveButton.addEventListener("click", connectIdentity);
-
-        modalElement.addEventListener("click", (event) => {
-            if (event.target === modalElement) closeModal();
-        });
-
-        modalElement.addEventListener("keydown", (event) => {
-            if (event.key === "Enter") {
-                event.preventDefault();
-                connectIdentity();
-            }
-        });
-
-        ui = {
-            openModal,
-            closeModal,
-            setStatus,
-            updateSummary
-        };
-
-        updateSummary();
-
-        if (!hasIdentity() && isConfigured()) {
-            openModal(true);
+        } catch (error) {
+            console.error("Shared sync refresh failed:", error);
         }
     }
 
     async function initializeRemoteState() {
-        const sessionCode = getSessionCode();
-        const username = getUsername();
-        if (!sessionCode || !isConfigured()) return;
+        if (!hasIdentity() || !isConfigured()) return;
 
-        const remote = await fetchRemoteState(sessionCode);
-        if (remote?.state?.data && Object.keys(remote.state.data).length > 0) {
+        const remote = await fetchRemoteState();
+        if (remote?.state?.data) {
             applyShareableState(remote.state);
+            lastKnownRemoteUpdatedAt = remote.updated_at || null;
         }
+    }
 
-        if (username) {
-            const registration = ensureUserRegistered(username);
-            if (registration.added) {
-                pendingLocalChanges = true;
-                await saveRemoteState(true);
-            }
-        }
+    function startPolling() {
+        clearInterval(pollTimer);
+        pollTimer = window.setInterval(refreshRemoteState, POLL_INTERVAL_MS);
     }
 
     patchLocalStorage();
 
     window.sharedSyncHasSession = hasIdentity;
     window.sharedSyncRequireSession = function () {
-        if (!isConfigured()) return true;
         if (hasIdentity()) return true;
-        if (ui) ui.openModal(true);
+        window.location.replace("index.html");
         return false;
     };
     window.sharedSyncForceSave = function () {
         return saveRemoteState(true);
     };
+
     window.sharedSyncReady = (async () => {
+        if (!hasIdentity()) {
+            window.location.replace("index.html");
+            return;
+        }
+
         try {
             await initializeRemoteState();
         } catch (error) {
@@ -459,14 +267,14 @@
     })();
 
     if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", () => {
-            injectSyncUi();
-            ensureIdentityPrompt();
-        });
+        document.addEventListener("DOMContentLoaded", renderIdentityUi);
     } else {
-        injectSyncUi();
-        ensureIdentityPrompt();
+        renderIdentityUi();
     }
 
-    window.addEventListener("load", ensureIdentityPrompt);
+    startPolling();
+    window.addEventListener("focus", refreshRemoteState);
+    window.addEventListener("beforeunload", () => {
+        saveRemoteState(true).catch(() => {});
+    });
 })();

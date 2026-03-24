@@ -321,4 +321,12 @@ resetCareerBtn.addEventListener("click", () => {
     location.reload();
 });
 
+window.addEventListener("shared-sync-updated", () => {
+    coopPlayers = JSON.parse(localStorage.getItem("careerPlayers"));
+    careerResults = JSON.parse(localStorage.getItem("careerResults")) || {};
+    syncPlayerNames();
+    preloadPlayerInputs();
+    renderCareerTree();
+});
+
 })();
