@@ -18,6 +18,7 @@
     let pendingLocalChanges = false;
     let saveTimer = null;
     let pollTimer = null;
+    let realtimeChannel = null;
     let lastKnownRemoteUpdatedAt = null;
     let ui = null;
 
@@ -97,6 +98,12 @@
         return client;
     }
 
+    function stopRealtime() {
+        if (!client || !realtimeChannel) return;
+        client.removeChannel(realtimeChannel);
+        realtimeChannel = null;
+    }
+
     async function fetchRemoteState(sessionCode) {
         const supabase = ensureClient();
         if (!supabase || !sessionCode) return null;
@@ -168,6 +175,34 @@
         } catch (error) {
             console.error("Shared sync poll failed:", error);
         }
+    }
+
+    function startRealtime() {
+        const supabase = ensureClient();
+        const sessionCode = getSessionCode();
+        if (!supabase || !sessionCode) return;
+
+        stopRealtime();
+
+        realtimeChannel = supabase
+            .channel(`career-sync-${sessionCode}`)
+            .on(
+                "postgres_changes",
+                {
+                    event: "*",
+                    schema: "public",
+                    table: window.SUPABASE_CONFIG.table || "career_sessions",
+                    filter: `session_code=eq.${sessionCode}`
+                },
+                async () => {
+                    try {
+                        await pollRemoteState();
+                    } catch (error) {
+                        console.error("Shared sync realtime poll failed:", error);
+                    }
+                }
+            )
+            .subscribe();
     }
 
     function patchLocalStorage() {
@@ -270,12 +305,14 @@
                     applyShareableState(remote.state);
                     lastKnownRemoteUpdatedAt = remote.updated_at || null;
                     setStatus("Se cargó el progreso compartido. La página se va a recargar.");
+                    startRealtime();
                     setTimeout(() => window.location.reload(), 700);
                     return true;
                 }
 
                 pendingLocalChanges = true;
                 await saveRemoteState(true);
+                startRealtime();
                 setStatus("Sesión compartida conectada correctamente.");
                 modalElement.classList.add("hidden");
                 return true;
@@ -293,6 +330,7 @@
         closeButton.addEventListener("click", closeModal);
 
         disconnectButton.addEventListener("click", () => {
+            stopRealtime();
             localStorage.removeItem(SESSION_KEY);
             setStatus("Sesión compartida desconectada.");
             openModal(true);
@@ -324,6 +362,8 @@
             applyShareableState(remote.state);
             lastKnownRemoteUpdatedAt = remote.updated_at || null;
         }
+
+        startRealtime();
     }
 
     function startPolling() {
