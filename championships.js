@@ -57,6 +57,7 @@ let championshipRaces = JSON.parse(localStorage.getItem("races_" + currentCatego
 let drivers = JSON.parse(localStorage.getItem("drivers_" + currentCategory)) || [];
 let activeResultsRaceIndex = null;
 let pendingDetectedHumans = [];
+let pendingRemoteRefresh = false;
 function normalizeAiMarkerText(value) {
     return String(value || "")
         .replace(/\(\s*[1lI|]\s*[aA]\s*\)/g, "(IA)")
@@ -163,6 +164,7 @@ function openPlayerModal() {
 
 function closePlayerModal() {
     playerModal.classList.add("hidden");
+    flushPendingRemoteRefresh();
 }
 
 function openResultsModal(raceIndex) {
@@ -214,6 +216,7 @@ function closeResultsModal() {
     ocrStatus.innerText = "";
     ocrStatus.classList.add("hidden");
     ocrImageInput.value = "";
+    flushPendingRemoteRefresh();
 }
 
 function closeHeaderMenu() {
@@ -587,6 +590,7 @@ function getDetectedHumanCandidates(resultsOrder) {
 function closePlayerDetectModal() {
     playerDetectModal.classList.add("hidden");
     pendingDetectedHumans = [];
+    flushPendingRemoteRefresh();
 }
 
 function maybeSuggestCareerPlayersFromResults(resultsOrder) {
@@ -1137,6 +1141,25 @@ function refreshChampionshipViewFromStorage() {
     updateTeamPanel();
 }
 
+function hasBlockingSyncModalOpen() {
+    return !resultsModal.classList.contains("hidden")
+        || !playerModal.classList.contains("hidden")
+        || !playerDetectModal.classList.contains("hidden");
+}
+
+function flushPendingRemoteRefresh() {
+    if (!pendingRemoteRefresh || hasBlockingSyncModalOpen()) return;
+    pendingRemoteRefresh = false;
+    refreshChampionshipViewFromStorage();
+}
+
 refreshChampionshipViewFromStorage();
-window.addEventListener("shared-sync-updated", refreshChampionshipViewFromStorage);
+window.addEventListener("shared-sync-updated", () => {
+    if (hasBlockingSyncModalOpen()) {
+        pendingRemoteRefresh = true;
+        return;
+    }
+
+    refreshChampionshipViewFromStorage();
+});
 })();
