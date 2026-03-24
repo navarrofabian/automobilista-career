@@ -1,3 +1,78 @@
+.sharedSyncSummary{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    margin:0 0 12px;
+    padding:10px 12px;
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:14px;
+    background:rgba(255,255,255,.04);
+}
+
+.sharedSyncHeaderCard{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    min-width:200px;
+    margin:12px 0 0;
+    padding:10px 12px;
+    border-radius:14px;
+    background:linear-gradient(180deg, rgba(15,22,30,.96), rgba(9,14,19,.96));
+    border:1px solid rgba(127,182,255,.16);
+    box-shadow:0 12px 26px rgba(0,0,0,.18);
+}
+
+.syncHeaderLabel{
+    font-size:10px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:#81baff;
+}
+
+.syncHeaderValue{
+    color:#f4f9ff;
+    font-size:14px;
+    line-height:1.2;
+}
+
+.syncHeaderMeta{
+    color:#b8cad9;
+    font-size:12px;
+    line-height:1.35;
+}
+
+.syncSummaryLabel{
+    font-size:11px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:#8ea8be;
+}
+
+.syncSummaryValue{
+    font-size:13px;
+    color:#eef7ff;
+    line-height:1.4;
+}
+
+.sharedSyncModalContent{
+    width:min(520px, calc(100vw - 32px));
+}
+
+.syncKicker{
+    display:inline-block;
+    margin-bottom:10px;
+    font-size:11px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:#7fb6ff;
+}
+
+.syncIntro{
+    margin:0 0 16px;
+    color:#d3dce3;
+    line-height:1.55;
+}
+
 .syncStatus{
     margin:0 0 8px;
     padding:10px 12px;
@@ -5,6 +80,16 @@
     background:#151f28;
     color:#c9e5ff;
     font-size:13px;
+}
+
+.syncStatus.success{
+    background:#14261b;
+    color:#bff3cf;
+}
+
+.syncStatus.warning{
+    background:#2b2213;
+    color:#ffe2a2;
 }
 
 .syncHint{
@@ -23,6 +108,33 @@
 .syncField label{
     font-size:13px;
     color:#d0d0d0;
+}
+
+.syncField input{
+    border:1px solid rgba(255,255,255,.1);
+    background:#15191f;
+    color:#f4f7fb;
+}
+
+.syncInfoCard{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    margin:4px 0 0;
+    padding:12px 14px;
+    border-radius:14px;
+    background:linear-gradient(180deg, rgba(25,36,48,.95), rgba(15,22,30,.95));
+    border:1px solid rgba(127,182,255,.14);
+    color:#d7e8f8;
+    font-size:13px;
+    line-height:1.5;
+}
+
+.syncInfoCard strong{
+    color:#f7fbff;
+    font-size:12px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
 }
 
 .syncActions{
@@ -69,6 +181,11 @@
 
     .syncActions button{
         width:100%;
+    }
+
+    .sharedSyncHeaderCard{
+        width:100%;
+        min-width:0;
     }
 
     .deployVersionBadge{
