@@ -1115,15 +1115,31 @@ resetChampionshipBtn.addEventListener("click", () => {
     updateChampionshipState();
 });
 
-syncHeaderPlayers();
-preloadPlayerInputs();
-renderCategoryHero();
-rebuildStandings();
-renderRaceList();
-updateChampionshipState();
-updateTeamPanel();
+function refreshChampionshipViewFromStorage() {
+    coopDrivers = JSON.parse(localStorage.getItem("careerPlayers")) || ["VacÃ­o", "VacÃ­o"];
+    championshipStarted = localStorage.getItem("championshipStarted_" + currentCategory) === "true";
+    championshipRaces = JSON.parse(localStorage.getItem("races_" + currentCategory)) || [];
+    drivers = JSON.parse(localStorage.getItem("drivers_" + currentCategory)) || [];
+    driverAliasMap = JSON.parse(localStorage.getItem(DRIVER_ALIASES_KEY)) || {};
+
+    closeHeaderMenu();
+    closePlayerDetectModal();
+    if (!resultsModal.classList.contains("hidden")) {
+        closeResultsModal();
+    }
+
+    syncHeaderPlayers();
+    preloadPlayerInputs();
+    renderCategoryHero();
+    rebuildStandings();
+    renderRaceList();
+    updateChampionshipState();
+    updateTeamPanel();
+}
+
+refreshChampionshipViewFromStorage();
 
 window.addEventListener("shared-sync-updated", () => {
-    window.location.reload();
+    refreshChampionshipViewFromStorage();
 });
 })();

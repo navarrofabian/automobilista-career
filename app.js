@@ -200,74 +200,82 @@ function levelUnlocked(levelIndex) {
     return completed >= 2;
 }
 
-career.forEach((level, levelIndex) => {
-    const levelDiv = document.createElement("div");
-    levelDiv.className = "tier";
+function renderCareerTree() {
+    tree.innerHTML = "";
+    totalCategories = 0;
+    completedCategories = 0;
 
-    const title = document.createElement("div");
-    title.className = "tierTitle";
-    title.innerText = level.level;
+    career.forEach((level, levelIndex) => {
+        const levelDiv = document.createElement("div");
+        levelDiv.className = "tier";
 
-    levelDiv.appendChild(title);
+        const title = document.createElement("div");
+        title.className = "tierTitle";
+        title.innerText = level.level;
 
-    level.branches.forEach((branch) => {
-        const branchTitle = document.createElement("h3");
-        branchTitle.innerText = branch.name;
-        levelDiv.appendChild(branchTitle);
+        levelDiv.appendChild(title);
 
-        const row = document.createElement("div");
-        row.className = "tierRow";
+        level.branches.forEach((branch) => {
+            const branchTitle = document.createElement("h3");
+            branchTitle.innerText = branch.name;
+            levelDiv.appendChild(branchTitle);
 
-        branch.categories.forEach((cat) => {
-            totalCategories++;
+            const row = document.createElement("div");
+            row.className = "tierRow";
 
-            const card = document.createElement("div");
-            card.className = "card";
+            branch.categories.forEach((cat) => {
+                totalCategories++;
 
-            const unlocked = levelUnlocked(levelIndex);
+                const card = document.createElement("div");
+                card.className = "card";
 
-            if (!unlocked) {
-                card.classList.add("locked");
-            }
+                const unlocked = levelUnlocked(levelIndex);
 
-            if (careerResults[cat.name]) {
-                card.classList.add("completed");
-                completedCategories++;
-            }
+                if (!unlocked) {
+                    card.classList.add("locked");
+                }
 
-            const img = document.createElement("img");
-            img.src = cat.img;
-            img.className = "cardBackground";
-            img.alt = `${cat.name} background`;
+                if (careerResults[cat.name]) {
+                    card.classList.add("completed");
+                    completedCategories++;
+                }
 
-            const icon = document.createElement("img");
-            icon.src = cat.icon;
-            icon.className = "cardIcon";
-            icon.alt = `${cat.name} icon`;
+                const img = document.createElement("img");
+                img.src = cat.img;
+                img.className = "cardBackground";
+                img.alt = `${cat.name} background`;
 
-            const name = document.createElement("div");
-            name.className = "cardTitle";
-            name.innerText = cat.name;
+                const icon = document.createElement("img");
+                icon.src = cat.icon;
+                icon.className = "cardIcon";
+                icon.alt = `${cat.name} icon`;
 
-            card.appendChild(img);
-            card.appendChild(icon);
-            card.appendChild(name);
-            row.appendChild(card);
+                const name = document.createElement("div");
+                name.className = "cardTitle";
+                name.innerText = cat.name;
 
-            card.addEventListener("click", () => {
-                if (!unlocked) return;
-                if (window.sharedSyncRequireSession && !window.sharedSyncRequireSession()) return;
+                card.appendChild(img);
+                card.appendChild(icon);
+                card.appendChild(name);
+                row.appendChild(card);
 
-                localStorage.setItem("currentCategory", cat.name);
-                window.location.href = "championship.html";
+                card.addEventListener("click", () => {
+                    if (!unlocked) return;
+                    if (window.sharedSyncRequireSession && !window.sharedSyncRequireSession()) return;
+
+                    localStorage.setItem("currentCategory", cat.name);
+                    window.location.href = "championship.html";
+                });
             });
+
+            levelDiv.appendChild(row);
         });
 
-        levelDiv.appendChild(row);
+        tree.appendChild(levelDiv);
     });
 
-    tree.appendChild(levelDiv);
-});
+    updateVerticalProgress();
+}
 
 // progreso global
 function updateVerticalProgress() {
@@ -280,7 +288,7 @@ function updateVerticalProgress() {
 }
 
 // actualizar al cargar
-updateVerticalProgress();
+renderCareerTree();
 
 // actualizar dinámicamente cada 3 segundos
 setInterval(updateVerticalProgress, 3000);
@@ -314,6 +322,10 @@ resetCareerBtn.addEventListener("click", () => {
 });
 
 window.addEventListener("shared-sync-updated", () => {
-    window.location.reload();
+    coopPlayers = JSON.parse(localStorage.getItem("careerPlayers"));
+    careerResults = JSON.parse(localStorage.getItem("careerResults")) || {};
+    syncPlayerNames();
+    preloadPlayerInputs();
+    renderCareerTree();
 });
 })();
