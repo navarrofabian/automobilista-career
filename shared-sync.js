@@ -19,13 +19,8 @@
     let pendingLocalChanges = false;
     let saveTimer = null;
     let pollTimer = null;
-    let realtimeChannel = null;
     let lastKnownRemoteUpdatedAt = null;
     let ui = null;
-
-    function emitSyncUpdated() {
-        window.dispatchEvent(new CustomEvent("shared-sync-updated"));
-    }
 
     function isConfigured() {
         return Boolean(
@@ -92,8 +87,6 @@
         } finally {
             applyingRemoteState = false;
         }
-
-        emitSyncUpdated();
     }
 
     function ensureClient() {
@@ -107,12 +100,6 @@
         }
 
         return client;
-    }
-
-    function stopRealtime() {
-        if (!client || !realtimeChannel) return;
-        client.removeChannel(realtimeChannel);
-        realtimeChannel = null;
     }
 
     async function fetchRemoteState(sessionCode) {
@@ -165,55 +152,6 @@
                 }
             });
         }, 600);
-    }
-
-    async function pollRemoteState() {
-        const sessionCode = getSessionCode();
-        if (!sessionCode || !isConfigured() || applyingRemoteState) return;
-
-        try {
-            if (pendingLocalChanges) {
-                await saveRemoteState(true);
-            }
-
-            const remote = await fetchRemoteState(sessionCode);
-            if (!remote?.state?.data) return;
-
-            if (remote.updated_at && remote.updated_at !== lastKnownRemoteUpdatedAt) {
-                applyShareableState(remote.state);
-                lastKnownRemoteUpdatedAt = remote.updated_at;
-            }
-        } catch (error) {
-            console.error("Shared sync poll failed:", error);
-        }
-    }
-
-    function startRealtime() {
-        const supabase = ensureClient();
-        const sessionCode = getSessionCode();
-        if (!supabase || !sessionCode) return;
-
-        stopRealtime();
-
-        realtimeChannel = supabase
-            .channel(`career-sync-${sessionCode}`)
-            .on(
-                "postgres_changes",
-                {
-                    event: "*",
-                    schema: "public",
-                    table: window.SUPABASE_CONFIG.table || "career_sessions",
-                    filter: `session_code=eq.${sessionCode}`
-                },
-                async () => {
-                    try {
-                        await pollRemoteState();
-                    } catch (error) {
-                        console.error("Shared sync realtime poll failed:", error);
-                    }
-                }
-            )
-            .subscribe();
     }
 
     function patchLocalStorage() {
@@ -325,14 +263,12 @@
                     applyShareableState(remote.state);
                     lastKnownRemoteUpdatedAt = remote.updated_at || null;
                     setStatus("Se cargó el progreso compartido. La página se va a recargar.");
-                    startRealtime();
                     setTimeout(() => window.location.reload(), 700);
                     return true;
                 }
 
                 pendingLocalChanges = true;
                 await saveRemoteState(true);
-                startRealtime();
                 setStatus("Sesión compartida conectada correctamente.");
                 modalElement.classList.add("hidden");
                 return true;
@@ -350,7 +286,6 @@
         closeButton.addEventListener("click", closeModal);
 
         disconnectButton.addEventListener("click", () => {
-            stopRealtime();
             localStorage.removeItem(SESSION_KEY);
             setStatus("Sesión compartida desconectada.");
             openModal(true);
@@ -382,36 +317,6 @@
             applyShareableState(remote.state);
             lastKnownRemoteUpdatedAt = remote.updated_at || null;
         }
-
-        startRealtime();
-    }
-
-    function startPolling() {
-        clearInterval(pollTimer);
-        pollRemoteState().catch((error) => {
-            console.error("Shared sync initial poll failed:", error);
-        });
-        pollTimer = setInterval(pollRemoteState, POLL_INTERVAL_MS);
-    }
-
-    function setupLifecycleSync() {
-        document.addEventListener("visibilitychange", () => {
-            if (document.visibilityState === "visible") {
-                pollRemoteState().catch((error) => {
-                    console.error("Shared sync visible poll failed:", error);
-                });
-            }
-
-            if (document.visibilityState === "hidden") {
-                saveRemoteState(true).catch((error) => {
-                    console.error("Shared sync flush failed:", error);
-                });
-            }
-        });
-
-        window.addEventListener("beforeunload", () => {
-            saveRemoteState(true).catch(() => {});
-        });
     }
 
     patchLocalStorage();
@@ -445,7 +350,5 @@
         ensureSessionPrompt();
     }
 
-    startPolling();
-    setupLifecycleSync();
     window.addEventListener("load", ensureSessionPrompt);
 })();
