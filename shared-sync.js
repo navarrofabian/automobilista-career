@@ -1,4 +1,5 @@
 (function () {
+    const DEPLOY_VERSION = "2026-03-23-sync-v2";
     const SESSION_KEY = "sharedCareerSessionCode";
     const SHAREABLE_EXACT_KEYS = new Set([
         "careerPlayers",
@@ -35,11 +36,21 @@
     }
 
     function getSessionCode() {
-        return localStorage.getItem(SESSION_KEY) || "";
+        return (localStorage.getItem(SESSION_KEY) || "").trim();
     }
 
     function hasSession() {
         return Boolean(getSessionCode());
+    }
+
+    function ensureSessionPrompt() {
+        if (!isConfigured() || hasSession()) return;
+        if (ui) {
+            ui.openModal(true);
+            return;
+        }
+
+        window.setTimeout(ensureSessionPrompt, 250);
     }
 
     function isShareableKey(key) {
@@ -264,6 +275,15 @@
         const disconnectButton = document.getElementById("disconnectSharedSyncBtn");
         const saveButton = document.getElementById("saveSharedSyncBtn");
 
+        let versionBadge = document.getElementById("deployVersionBadge");
+        if (!versionBadge) {
+            versionBadge = document.createElement("div");
+            versionBadge.id = "deployVersionBadge";
+            versionBadge.className = "deployVersionBadge";
+            versionBadge.innerText = `Deploy ${DEPLOY_VERSION}`;
+            document.body.appendChild(versionBadge);
+        }
+
         function setStatus(message, visible = true) {
             statusElement.innerText = message;
             statusElement.classList.toggle("hidden", !visible);
@@ -416,11 +436,16 @@
     })();
 
     if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", injectSyncUi);
+        document.addEventListener("DOMContentLoaded", () => {
+            injectSyncUi();
+            ensureSessionPrompt();
+        });
     } else {
         injectSyncUi();
+        ensureSessionPrompt();
     }
 
     startPolling();
     setupLifecycleSync();
+    window.addEventListener("load", ensureSessionPrompt);
 })();

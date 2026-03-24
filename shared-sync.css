@@ -40,6 +40,22 @@
     background:#373737 !important;
 }
 
+.deployVersionBadge{
+    position:fixed;
+    right:14px;
+    bottom:14px;
+    z-index:9999;
+    padding:8px 10px;
+    border:1px solid rgba(255,255,255,.14);
+    border-radius:12px;
+    background:rgba(10,14,18,.88);
+    color:#d6e9ff;
+    font-size:12px;
+    letter-spacing:.02em;
+    backdrop-filter:blur(10px);
+    box-shadow:0 10px 30px rgba(0,0,0,.28);
+}
+
 @media (max-width: 700px) {
     .headerDropdown{
         left:0 !important;
@@ -53,5 +69,12 @@
 
     .syncActions button{
         width:100%;
+    }
+
+    .deployVersionBadge{
+        right:10px;
+        bottom:10px;
+        font-size:11px;
+        padding:7px 9px;
     }
 }
